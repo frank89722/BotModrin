@@ -11,6 +11,7 @@ import Logging
 import CodableFiles
 import SQLite
 
+
 final class BotModrin {
     
     public static let shared = BotModrin()
@@ -20,27 +21,30 @@ final class BotModrin {
     var config: Config
     
     let swiftCord: Swiftcord
-    let projectManager: ProjectManager
-    let commandManager: CommandManager
+    private(set) lazy var projectManager = ProjectManager(self)
+    let commandManager = CommandManager()
     let db: Connection?
     
     
     private init() {
         let codableFiles = CodableFiles.shared
+        let rootDir = Bundle.main.resourceURL!.description
         
         do {
-            config = try codableFiles.load(objectType: Config.self, withFilename: "config", atDirectory: ".")!
+            config = try codableFiles.load(objectType: Config.self, withFilename: "config", atDirectory: rootDir)!
         } catch {
             logger.error("Invalid config")
-            let _ = try? codableFiles.save(object: Config(), withFilename: "config", atDirectory: ".")
+            let _ = try? codableFiles.save(object: Config(), withFilename: "config", atDirectory: rootDir)
             exit(78)
         }
         
+        #if DEBUG
         db = try? Connection(.inMemory)
+        #else
+        db = try? Connection(.uri(rootDir + "/bot_modrin.db"))
+        #endif
         
         swiftCord = Swiftcord(token: config.bot_token, eventLoopGroup: .none)
-        projectManager = ProjectManager()
-        commandManager = CommandManager()
     }
     
     deinit {
@@ -50,6 +54,10 @@ final class BotModrin {
     fileprivate func start() {
         swiftCord.addListeners(BotModrinListener(self))
         swiftCord.connect()
+    }
+    
+    fileprivate func onReady() {
+        projectManager.runUpdaterTask()
     }
     
 }
@@ -66,6 +74,7 @@ fileprivate class BotModrinListener: ListenerAdapter {
     
     override func onReady(botUser: User) async {
         try? botModrin.commandManager.register(command: CommandTrackAdd())
+        botModrin.onReady()
     }
     
     override func onSlashCommandEvent(event: SlashCommandEvent) async {
@@ -78,7 +87,7 @@ fileprivate class BotModrinListener: ListenerAdapter {
 @main
 extension BotModrin {
     public static func main() {
-        shared.start()
+        BotModrin.shared.start()
     }
 }
 

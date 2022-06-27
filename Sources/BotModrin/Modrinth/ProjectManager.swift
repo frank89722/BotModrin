@@ -15,12 +15,13 @@ class ProjectManager {
     private let logger = Logger(label: "frankv.BotModrin.ProjectManager")
     
     private let apiService = ApiService.modrinth
-    private let repo = ProjectRepository.shared
-    private let projectUpdater = ProjectUpdater.shared
+    //    private let repo = ProjectRepository.shared
+    fileprivate let repo: ProjectRepository
+    private lazy var projectUpdater = ProjectUpdater(repo: repo)
     var doUpdate = true
     
-    init() {
-        runUpdater()
+    init (_ main: BotModrin) {
+        repo = ProjectRepository(db: main.db!)
     }
     
     deinit {
@@ -28,16 +29,14 @@ class ProjectManager {
     }
     
     func add(_ project: Project, channelId: Snowflake) {
-        Task {
-            do {
-                try await repo.insert(project: project, channelId: channelId)
-            } catch {
-                logger.error("\(error.localizedDescription)")
-            }
+        do {
+            try repo.insert(project: project, channelId: channelId)
+        } catch {
+            logger.error("\(error.localizedDescription)")
         }
     }
     
-    func runUpdater() {
+    func runUpdaterTask() {
         Task(priority: .background) {
             while doUpdate {
                 try? await projectUpdater.runUpdate()
@@ -49,9 +48,7 @@ class ProjectManager {
 }
 
 
-fileprivate actor ProjectRepository {
-    
-    fileprivate static let shared = ProjectRepository(db: BotModrin.shared.db!)
+fileprivate class ProjectRepository {
     
     let db: Connection
     
@@ -64,7 +61,7 @@ fileprivate actor ProjectRepository {
     let channelId = Expression<String>("channelId")
     
     
-    private init(db: Connection) {
+    fileprivate init(db: Connection) {
         self.db = db
         
         let _ = try? db.run(projects.create { t in
@@ -91,13 +88,13 @@ fileprivate actor ProjectRepository {
 
 actor ProjectUpdater {
     
-    fileprivate static let shared = ProjectUpdater()
-    
     private let logger = Logger(label: "frankv.BotModrin.ProjectUpdater")
-    private let repo = ProjectRepository.shared
+    private let repo: ProjectRepository
     
     
-    fileprivate init(){}
+    fileprivate init(repo: ProjectRepository){
+        self.repo = repo
+    }
     
     func runUpdate() async throws {
         let apiService = ApiService.modrinth
@@ -109,7 +106,7 @@ actor ProjectUpdater {
                 switch fetchResult {
                 case .success(let project):
                     guard row[repo.lastUpdate] < project.updated.date else { break }
-
+                    
                     await sendMessageTo(row[repo.channelId], projectId: row[repo.id], fileId: project.versions.last!)
                     
                 case .failure(let error):
