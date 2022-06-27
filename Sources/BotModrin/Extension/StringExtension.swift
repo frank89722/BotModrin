@@ -15,7 +15,6 @@ extension String {
         dateFormat.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZ"
         return dateFormat
     }()
-
     
     private static let dateFormatShort: DateFormatter = {
         let dateFormat = DateFormatter()
@@ -23,7 +22,6 @@ extension String {
         dateFormat.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
         return dateFormat
     }()
-
     
     private static let dateFormatHTTP: DateFormatter = {
         let dateFormat = DateFormatter()
@@ -31,7 +29,6 @@ extension String {
         dateFormat.dateFormat = "E, dd MMM yyyy HH:mm:ss zzzz"
         return dateFormat
     }()
-
     
     var date: Date {
         if let returnDate = String.dateFormatLong.date(from: self) {
@@ -40,7 +37,6 @@ extension String {
             return String.dateFormatShort.date(from: self)!
         }
     }
-
     
     var httpDate: Date {
         return String.dateFormatHTTP.date(from: self)!

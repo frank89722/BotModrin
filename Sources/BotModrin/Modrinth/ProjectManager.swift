@@ -8,6 +8,7 @@
 import Foundation
 import SQLite
 import Logging
+import Swiftcord
 
 class ProjectManager {
     
@@ -15,23 +16,41 @@ class ProjectManager {
     
     private let apiService = ApiService.modrinth
     private let repo = ProjectRepository.shared
+    private let projectUpdater = ProjectUpdater.shared
+    var doUpdate = true
     
+    init() {
+        runUpdater()
+    }
     
-    func add(_ project: Project) {
-        do {
-            try repo.insert(project: project)
-        } catch {
-            logger.error("\(error.localizedDescription)")
+    deinit {
+        doUpdate = false
+    }
+    
+    func add(_ project: Project, channelId: Snowflake) {
+        Task {
+            do {
+                try await repo.insert(project: project, channelId: channelId)
+            } catch {
+                logger.error("\(error.localizedDescription)")
+            }
         }
     }
     
-    func getAll() {
-        
+    func runUpdater() {
+        Task(priority: .background) {
+            while doUpdate {
+                try? await projectUpdater.runUpdate()
+                try! await Task.sleep(nanoseconds: 10_000_000_000)
+            }
+        }
     }
     
 }
 
-fileprivate class ProjectRepository {
+
+fileprivate actor ProjectRepository {
+    
     fileprivate static let shared = ProjectRepository(db: BotModrin.shared.db!)
     
     let db: Connection
@@ -45,7 +64,7 @@ fileprivate class ProjectRepository {
     let channelId = Expression<String>("channelId")
     
     
-    init(db: Connection) {
+    private init(db: Connection) {
         self.db = db
         
         let _ = try? db.run(projects.create { t in
@@ -57,38 +76,64 @@ fileprivate class ProjectRepository {
         })
     }
     
-    
-    func insert(project p: Project) throws {
-        try db.run(projects.insert(id <- p.id, title <- p.title, latestVersion <- p.versions.last!, lastUpdate <- p.updated.date))
+    func insert(project p: Project, channelId snowflake: Snowflake) throws {
+        try db.run(projects.insert(
+            id <- p.id,
+            title <- p.title,
+            latestVersion <- p.versions.last!,
+            lastUpdate <- p.updated.date,
+            channelId <- "\(snowflake.rawValue)"
+        ))
     }
     
 }
 
-extension ProjectRepository {
+
+actor ProjectUpdater {
+    
+    fileprivate static let shared = ProjectUpdater()
+    
+    private let logger = Logger(label: "frankv.BotModrin.ProjectUpdater")
+    private let repo = ProjectRepository.shared
+    
+    
+    fileprivate init(){}
     
     func runUpdate() async throws {
         let apiService = ApiService.modrinth
         
-        try db.prepare(projects).forEach { row in
-            Task {
-                let fetchResult = await apiService.fetchApi("/project/\(row[id])", objectType: Project.self)
+        Task {
+            for row in try repo.db.prepare(repo.projects) {
+                let fetchResult = await apiService.fetchApi("/project/\(row[repo.id])", objectType: Project.self)
                 
                 switch fetchResult {
                 case .success(let project):
-                    guard row[lastUpdate] < project.updated.date else { break }
+                    guard row[repo.lastUpdate] < project.updated.date else { break }
 
-                    //Todo: do update thing
-                    print("")
+                    await sendMessageTo(row[repo.channelId], projectId: row[repo.id], fileId: project.versions.last!)
                     
-                case .failure:
-                    //Todo: remove the thing
-                    break
+                case .failure(let error):
+                    logger.warning("Project \"\(row[repo.id])\" faild to fetch: \(error.localizedDescription)")
                 }
                 
-                try! await Task.sleep(nanoseconds:500_000_000)
+                try! await Task.sleep(nanoseconds:5_000_000_000)
             }
             
         }
+    }
+    
+    private func sendMessageTo(_ channelId: String, projectId: String, fileId: String) async {
+        let bot = BotModrin.shared.swiftCord
+        
+        guard let channelIdUInt = UInt64(channelId) else { return }
+        
+        let embed = EmbedBuilder()
+            .setTitle(title: "New file released!")
+            .addField("Mod: ", value: projectId)
+            .addField("File", value: fileId)
+            .setTimestamp()
+        
+        let _ = try? await bot.send(embed, to: Snowflake(rawValue: channelIdUInt))
     }
     
 }

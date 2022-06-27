@@ -11,7 +11,7 @@ import Logging
 import CodableFiles
 import SQLite
 
-class BotModrin {
+final class BotModrin {
     
     public static let shared = BotModrin()
     
@@ -25,7 +25,7 @@ class BotModrin {
     let db: Connection?
     
     
-    init() {
+    private init() {
         let codableFiles = CodableFiles.shared
         
         do {
@@ -43,11 +43,9 @@ class BotModrin {
         commandManager = CommandManager()
     }
     
-    
     deinit {
         swiftCord.disconnect()
     }
-    
 
     fileprivate func start() {
         swiftCord.addListeners(BotModrinListener(self))
@@ -55,6 +53,7 @@ class BotModrin {
     }
     
 }
+
 
 fileprivate class BotModrinListener: ListenerAdapter {
     
@@ -65,11 +64,9 @@ fileprivate class BotModrinListener: ListenerAdapter {
         self.botModrin = botModrin
     }
     
-    
     override func onReady(botUser: User) async {
         try? botModrin.commandManager.register(command: CommandTrackAdd())
     }
-    
     
     override func onSlashCommandEvent(event: SlashCommandEvent) async {
         await botModrin.commandManager.onSlashCommandEvent(event: event)
@@ -77,14 +74,14 @@ fileprivate class BotModrinListener: ListenerAdapter {
     
 }
 
+
 @main
 extension BotModrin {
-    
     public static func main() {
         shared.start()
     }
-    
 }
+
 
 struct Config: Codable {
     var bot_token: String = "enter the bot token here"

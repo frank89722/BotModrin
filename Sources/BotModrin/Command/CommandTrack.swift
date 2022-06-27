@@ -34,7 +34,7 @@ class CommandTrackAdd: Command {
         
         switch fetchResult {
         case .success(let project):
-            projectManager.add(project)
+            projectManager.add(project, channelId: event.channelId)
             try! await event.reply(message: project.title + "is added to tracking list")
             
         case .failure(let error):
@@ -43,15 +43,13 @@ class CommandTrackAdd: Command {
                 if code == 404 {
                     logger.error("Error fetching project: \(error.localizedDescription)")
                     try! await event.reply(message: "Project: \(projectId) is not found")
-                    break
+                    return
                 }
-                
-                try! await event.reply(message: "We have some issue...")
-                
             default:
-                try! await event.reply(message: "We have some issue...")
-                
+                break
             }
+            
+            try! await event.reply(message: "We have some issue...")
             
         }
         

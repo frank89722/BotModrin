@@ -13,11 +13,13 @@ enum CommandError: Error {
     case registerError(String)
 }
 
+
 protocol Command {
     var key: String { get }
     var builder: SlashCommandBuilder { get }
     func onCommandEvent(event: SlashCommandEvent) async -> Void
 }
+
 
 class CommandManager {
     
@@ -45,7 +47,6 @@ class CommandManager {
         commands.updateValue(command, forKey: command.key)
         
     }
-    
     
     func onSlashCommandEvent(event: SlashCommandEvent) async {
         let commands = BotModrin.shared.commandManager.commands
