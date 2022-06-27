@@ -83,6 +83,11 @@ fileprivate class ProjectRepository {
         ))
     }
     
+    func updateBy(id _id: String, lastUpdate _lastUpdate: Date, latestVersion _latestVersion: String) {
+        let queryResult = projects.filter(id == _id)
+        try! db.run(queryResult.update(lastUpdate <- _lastUpdate, latestVersion <- _latestVersion))
+    }
+    
 }
 
 
@@ -107,6 +112,7 @@ actor ProjectUpdater {
                 case .success(let project):
                     guard row[repo.lastUpdate] < project.updated.date else { break }
                     
+                    repo.updateBy(id: row[repo.id], lastUpdate: project.updated.date, latestVersion: project.versions.last!)
                     await sendMessageTo(row[repo.channelId], projectId: row[repo.id], fileId: project.versions.last!)
                     
                 case .failure(let error):
