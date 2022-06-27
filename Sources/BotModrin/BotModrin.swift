@@ -14,7 +14,11 @@ import SQLite
 
 final class BotModrin {
     
+    #if DEBUG
+    public static let shared = BotModrin(isDebug: true)
+    #else
     public static let shared = BotModrin()
+    #endif
     
     let logger = Logger(label: "frankv.BotModrin.BotModrin")
     
@@ -26,23 +30,20 @@ final class BotModrin {
     let db: Connection?
     
     
-    private init() {
+    private init(isDebug: Bool = false) {
+        
         let codableFiles = CodableFiles.shared
         let rootDir = Bundle.main.resourceURL!.description
         
         do {
-            config = try codableFiles.load(objectType: Config.self, withFilename: "config", atDirectory: rootDir)!
+            config = try codableFiles.load(objectType: Config.self, withFilename: "config", atDirectory: isDebug ? "." : rootDir)!
         } catch {
             logger.error("Invalid config")
-            let _ = try? codableFiles.save(object: Config(), withFilename: "config", atDirectory: rootDir)
+            let _ = try? codableFiles.save(object: Config(), withFilename: "config", atDirectory: isDebug ? "." : rootDir)
             exit(78)
         }
         
-        #if DEBUG
-        db = try? Connection(.inMemory)
-        #else
-        db = try? Connection(.uri(rootDir + "/bot_modrin.db"))
-        #endif
+        db = try? Connection(isDebug ? .inMemory : .uri(rootDir + "/bot_modrin.db"))
         
         swiftCord = Swiftcord(token: config.bot_token, eventLoopGroup: .none)
     }
