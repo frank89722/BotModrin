@@ -212,9 +212,14 @@ fileprivate actor ProjectUpdater {
         let bot = BotModrin.shared.swiftCord
         
         let embed = EmbedBuilder()
-            .setTitle(title: "New file released!")
-            .addField("Mod: ", value: projectId)
-            .addField("File", value: fileId)
+//            .setTitle(title: "\(project.title)")
+            .setAuthor(name: project.title, url: "https://modrinth.com/mod/\(project.slug)", iconUrl: project.icon_url)
+            .setDescription(description: "New file released!")
+            .addField("Release channel", value: "unknow", isInline: true)
+            .addField("Mod loaders", value: "unknow", isInline: true)
+            .addField("Minecraft", value: "unknow", isInline: true)
+//            .addField("\u200B", value: "\u200B")
+            .addField("Files", value: "[\("filename")]()")
             .setTimestamp()
         
         for channelId in channelIds {
