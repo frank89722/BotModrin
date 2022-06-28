@@ -76,6 +76,8 @@ fileprivate class BotModrinListener: ListenerAdapter {
     override func onReady(botUser: User) async {
         try? botModrin.commandManager.register(command: CommandTrackAdd())
         botModrin.onReady()
+        
+        botModrin.commandManager.postOnReady()
     }
     
     override func onSlashCommandEvent(event: SlashCommandEvent) async {

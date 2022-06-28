@@ -25,8 +25,6 @@ class CommandManager {
     
     private let logger = Logger(label: "frankv.BotModrin.CommandManager")
     
-    private let swiftCord = BotModrin.shared.swiftCord
-    
     private(set) var commands = [String: Command]()
     private(set) var registerDisabled = false
     
@@ -40,6 +38,7 @@ class CommandManager {
         
         Task {
             do {
+                let swiftCord = BotModrin.shared.swiftCord
                 let onlineCommands = try await swiftCord.getApplicationCommands()
                 let existed = onlineCommands.contains(where: { cmd in
                     let builder = command.builder
@@ -75,8 +74,20 @@ class CommandManager {
         }
     }
     
-    func disableRegister() {
-        registerDisabled = true
+    func postOnReady() {
+        guard !registerDisabled else { return }
+        
+        Task {
+            let swiftCord = BotModrin.shared.swiftCord
+            guard let onlineCommands = try? await swiftCord.getApplicationCommands() else { return }
+            
+            for command in onlineCommands {
+                if commands.keys.contains(command.name) { continue }
+                try? await swiftCord.deleteApplicationCommand(commandId: command.id)
+            }
+        }
+        
+        registerDisabled = false
     }
     
 }
