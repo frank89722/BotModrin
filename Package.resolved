@@ -3,10 +3,10 @@
     {
       "identity" : "codablefiles",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/egzonpllana/CodableFiles.git",
+      "location" : "https://github.com/frank89722/CodableFiles",
       "state" : {
-        "revision" : "5aadcc7cd7e28733a7949741b488124181b6320a",
-        "version" : "1.0.1"
+        "branch" : "fix",
+        "revision" : "a440134459ce6d9b0d98a2da6e2a92315261e5f9"
       }
     },
     {
