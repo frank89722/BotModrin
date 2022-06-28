@@ -25,10 +25,14 @@ class CommandManager {
     
     private let logger = Logger(label: "frankv.BotModrin.CommandManager")
     
-    private(set) var commands = [String: Command]()
+    private let swiftCord = BotModrin.shared.swiftCord
     
+    private(set) var commands = [String: Command]()
+    private(set) var registerDisabled = false
     
     func register(command: Command) throws {
+        guard !registerDisabled else { throw CommandError.registerError("Register has been disabled") }
+        
         if commands[command.key] != nil {
             logger.error("Faild to register command \"\(command.key)\": Command already existed.")
             throw CommandError.registerError("Command already existed.")
@@ -36,7 +40,21 @@ class CommandManager {
         
         Task {
             do {
-                try await BotModrin.shared.swiftCord.uploadSlashCommand(commandData: command.builder)
+                let onlineCommands = try await swiftCord.getApplicationCommands()
+                let existed = onlineCommands.contains(where: { cmd in
+                    let builder = command.builder
+                    
+                    return builder.name == cmd.name &&
+                    builder.defaultMemberPermissions == cmd.defaultMemberPermissions &&
+                    builder.description == cmd.description &&
+                    builder.options == cmd.options
+                })
+                
+                if !existed {
+                    try await swiftCord.uploadSlashCommand(commandData: command.builder)
+                    logger.info("Command \"\(command.key)\" has been upload to discord.")
+                }
+                
                 logger.info("Command \"\(command.key)\" is registered.")
             } catch {
                 logger.info("Faild to register command \"\(command.key)\": \(error.localizedDescription)")
@@ -57,4 +75,17 @@ class CommandManager {
         }
     }
     
+    func disableRegister() {
+        registerDisabled = true
+    }
+    
+}
+
+extension ApplicationCommandOptions: Equatable {
+    public static func == (lhs: ApplicationCommandOptions, rhs: ApplicationCommandOptions) -> Bool {
+        return lhs.type == rhs.type &&
+        lhs.name == rhs.name &&
+        lhs.description == rhs.description &&
+        lhs.required == rhs.required
+    }
 }
