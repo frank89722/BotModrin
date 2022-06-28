@@ -1,5 +1,9 @@
 import Foundation
 
+#if os(Linux)
+import FoundationNetworking
+#endif
+
 enum HttpError: Error {
     case code(Int)
     case unknow
@@ -11,43 +15,31 @@ class ApiService {
     
     let urlString: String
     
+    
     init(urlString: String) {
         self.urlString = urlString
-    }
-    
-    func fetchApi<T: Codable>(_ endPointString: String, objectType: T.Type, completion: @escaping (Result<T, Error>) -> Void) {
-
-        let url = URL(string: urlString + endPointString)!
-
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-
-            guard code == 200 else {
-                completion(.failure(HttpError.code(code)))
-                return
-            }
-
-            guard let data = data else {
-                completion(.failure(HttpError.unknow))
-                return
-            }
-
-            let decoder = JSONDecoder()
-            do {
-                let result = try decoder.decode(objectType, from: data)
-                completion(.success(result))
-            } catch(let error) {
-                completion(.failure(error))
-            }
-
-        }
-
     }
     
     func fetchApi<T: Codable>(_ endPointString: String, objectType: T.Type) async -> Result<T, Error> {
         
         let url = URL(string: urlString + endPointString)!
-        let (data, response) = try! await URLSession.shared.data(from: url)
+        
+        var (data, response): (Data?, URLResponse?)
+        
+        #if os(Linux)
+        (data, response) = try! await withCheckedContinuation { continuation in
+            URLSession.shared.dataTask(with: url) { data, response, _ in
+                continuation.resume(returning: (data, response))
+            }.resume()
+        }
+        #else
+        (data, response) = try! await URLSession.shared.data(from: url)
+        #endif
+        
+        guard let data = data, let response = response else {
+            return .failure(HttpError.unknow)
+        }
+        
         let code = (response as? HTTPURLResponse)?.statusCode ?? 0
         
         guard code == 200 else {
@@ -55,12 +47,13 @@ class ApiService {
         }
         
         let decoder = JSONDecoder()
+        
         do {
             let result = try decoder.decode(objectType, from: data)
             return .success(result)
         } catch(let error) {
             return .failure(error)
         }
-
+        
     }
 }
