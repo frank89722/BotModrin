@@ -19,7 +19,7 @@ class CommandTrackAdd: Command {
 
     let key = "trackadd"
     
-    lazy private(set) var builder = try! SlashCommandBuilder(name: self.key, description: "sdf")
+    lazy private(set) var builder = try! SlashCommandBuilder(name: self.key, description: "Track a project in this channel", defaultMemberPermissions: "16")
         .addOption(option: try! ApplicationCommandOptions(name: "project", description: "Project id or Slug", type: .string))
     
     let projectManager = BotModrin.shared.projectManager
