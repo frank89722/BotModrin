@@ -50,28 +50,23 @@ class CommandTrackAdd: Command {
             
         case .failure(let error):
             switch error {
-            case HttpError.code(let code):
-                if code == 404 {
-                    logger.error("Error fetching project: \(error.localizedDescription)")
-                    try? await event.reply(message: "Project: \(projectId) is not found")
-                    return
-                }
+            case HttpError.code(let code) where code == 404:
+                logger.error("Error fetching project: \(error.localizedDescription)")
+                try? await event.reply(message: "Project: \(projectId) is not found")
+                
             default:
-                break
+                try? await event.reply(message: "We have some issue...")
             }
-            
-            try? await event.reply(message: "We have some issue...")
         }
     }
     
     private func add(_ event: SlashCommandEvent, project: Project) async {
         do {
             try await projectManager.add(project, channelId: event.channelId)
+            try? await event.reply(message: project.title + " is added to tracking list")
         } catch {
             try? await event.reply(message: project.title + " is already in the tracking list")
         }
-        
-        try? await event.reply(message: project.title + " is added to tracking list")
     }
     
     private func remove(_ event: SlashCommandEvent, project: Project) async {
