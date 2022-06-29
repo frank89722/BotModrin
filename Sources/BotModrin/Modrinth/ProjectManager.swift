@@ -250,7 +250,7 @@ fileprivate actor ProjectUpdater {
             .setColor(color: 1825130)
             .setDescription(description: "New file released!")
             .addField("Files", value:
-                        "[\(v.files[0].filename)](https://modrinth.com/\(project.project_type)/\(project.slug)/version/\(v.version_number)" + (v.files.count > 1 ? "\n+\(v.files.count-1) file(s)" : ""))
+                        "[\(v.files[0].filename)](https://modrinth.com/\(project.project_type)/\(project.slug)/version/\(v.version_number))" + (v.files.count > 1 ? "\n+\(v.files.count-1) file(s)" : ""))
             .addField("Release channel", value: v.version_type, isInline: true)
             .addField("Mod loaders", value: v.loaders.joined(separator: ", "), isInline: true)
             .addField("Minecraft", value: v.game_versions.joined(separator: ", "), isInline: true)
