@@ -248,11 +248,11 @@ fileprivate actor ProjectUpdater {
     
     private func createEmbed(project: Project, version v: Version) -> EmbedBuilder {
         return EmbedBuilder()
-            .setAuthor(name: project.title, url: "https://modrinth.com/mod/\(project.slug)", iconUrl: project.icon_url)
+            .setAuthor(name: project.title, url: "https://modrinth.com/\(project.project_type)/\(project.slug)", iconUrl: project.icon_url)
             .setColor(color: 1825130)
             .setDescription(description: "New file released!")
             .addField("Files", value:
-                        "[\(v.files[0].filename)](https://modrinth.com/mod/\(project.slug)/version/\(v.version_number)" + (v.files.count > 1 ? "\n+\(v.files.count-1) file(s)" : ""))
+                        "[\(v.files[0].filename)](https://modrinth.com/\(project.project_type)/\(project.slug)/version/\(v.version_number)" + (v.files.count > 1 ? "\n+\(v.files.count-1) file(s)" : ""))
             .addField("Release channel", value: v.version_type, isInline: true)
             .addField("Mod loaders", value: v.loaders.joined(separator: ", "), isInline: true)
             .addField("Minecraft", value: v.game_versions.joined(separator: ", "), isInline: true)
