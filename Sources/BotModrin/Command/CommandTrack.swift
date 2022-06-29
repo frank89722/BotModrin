@@ -59,12 +59,24 @@ class CommandTrackAdd: Command {
     }
     
     private func add(_ event: SlashCommandEvent, project: Project) async {
-        do {
-            try await projectManager.add(project, channelId: event.channelId)
-            try? await event.reply(message: project.title + " is added to tracking list")
-        } catch {
-            try? await event.reply(message: project.title + " is already in the tracking list")
+        let fetchResult = await apiService.fetchApi("/project/\(project.id)/version", objectType: [Version].self)
+        
+        switch fetchResult {
+        case .success(let versions):
+            let v = versions[0]
+            
+            do {
+                try await projectManager.add(project, latestVersion: v.id, channelId: event.channelId)
+                try? await event.reply(message: project.title + " is added to tracking list")
+            } catch {
+                try? await event.reply(message: project.title + " is already in the tracking list")
+            }
+            
+        case .failure(let error):
+            botModrin.logError("Failed to fetch latest version in CommandTrackAdd#add: \(error.localizedDescription)")
+            try? await event.reply(message: "We have some issue...")
         }
+        
     }
     
     private func remove(_ event: SlashCommandEvent, project: Project) async {

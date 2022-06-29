@@ -36,8 +36,8 @@ class ProjectManager {
         updateTask?.cancel()
     }
     
-    func add(_ project: Project, channelId: Snowflake) async throws {
-        try? await projectRepo.insert(project: project)
+    func add(_ project: Project, latestVersion: String, channelId: Snowflake) async throws {
+        try? await projectRepo.insert(project: project, latestVersion: latestVersion)
         try await channelRepo.insert(project: project, channelId: channelId)
     }
     
@@ -82,11 +82,11 @@ fileprivate actor ProjectRepository {
         })
     }
     
-    func insert(project p: Project) throws {
+    func insert(project p: Project, latestVersion v: String) throws {
         try db.run(projects.insert(or: .fail,
             id <- p.id,
             title <- p.title,
-            latestVersion <- p.versions.last!,
+            latestVersion <- v,
             lastUpdate <- p.updated.date
         ))
     }
@@ -207,7 +207,7 @@ fileprivate actor ProjectUpdater {
                     
                     do {
                         try await projectRepo.updateBy(project: project)
-                        await sendMessageTo(channels, project: project)
+                        await sendMessageTo(channels, project: project, localVersion: row[projectRepo.latestVersion])
                     } catch {
                         botModrin.logWarning("Failed on update project \"\(project.id)\" in project repository: \(error.localizedDescription)")
                     }
@@ -222,29 +222,40 @@ fileprivate actor ProjectUpdater {
         }
     }
     
-    private func sendMessageTo(_ channelIds: [String], project: Project) async {
-        let bot = BotModrin.shared.swiftCord
+    private func sendMessageTo(_ channelIds: [String], project: Project, localVersion: String) async {
+        let bot = botModrin.swiftCord
+        let fetchResult = await ApiService.modrinth.fetchApi("/project/\(project.id)/version", objectType: [Version].self)
+        var embeds = [EmbedBuilder]()
         
-        let embed = EmbedBuilder()
-//            .setTitle(title: "\(project.title)")
-            .setAuthor(name: project.title, url: "https://modrinth.com/mod/\(project.slug)", iconUrl: project.icon_url)
-            .setDescription(description: "New file released!")
-            .addField("Release channel", value: "unknow", isInline: true)
-            .addField("Mod loaders", value: "unknow", isInline: true)
-            .addField("Minecraft", value: "unknow", isInline: true)
-//            .addField("\u200B", value: "\u200B")
-            .addField("Files", value: "[\("filename")]()")
-            .setTimestamp()
-        
-        for channelId in channelIds {
-            guard let channelIdUInt = UInt64(channelId) else { continue }
+        switch fetchResult {
+        case .success(let versions):
+            for v in versions {
+                guard v.id != localVersion else { break }
+                embeds.append(createEmbed(project: project, version: v))
+            }
             
-            Task {
+        case .failure(let error):
+            botModrin.logWarning("Failed on fetching Version data from modrinth: \(error.localizedDescription)")
+        }
+        
+        for embed in embeds {
+            for channelId in channelIds {
+                guard let channelIdUInt = UInt64(channelId) else { continue }
                 let _ = try? await bot.send(embed, to: Snowflake(rawValue: channelIdUInt))
             }
         }
-        
     }
-        
+    
+    private func createEmbed(project: Project, version v: Version) -> EmbedBuilder {
+        return EmbedBuilder()
+            .setAuthor(name: project.title, url: "https://modrinth.com/mod/\(project.slug)", iconUrl: project.icon_url)
+            .setColor(color: 1825130)
+            .setDescription(description: "New file released!")
+            .addField("Files", value:
+                        "[\(v.files[0].filename)](https://modrinth.com/mod/\(project.slug)/version/\(v.version_number)" + (v.files.count > 1 ? "\n+\(v.files.count-1) file(s)" : ""))
+            .addField("Release channel", value: v.version_type, isInline: true)
+            .addField("Mod loaders", value: v.loaders.joined(separator: ", "), isInline: true)
+            .addField("Minecraft", value: v.game_versions.joined(separator: ", "), isInline: true)
+    }
     
 }

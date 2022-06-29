@@ -9,8 +9,8 @@ struct Version: Hashable, Identifiable, Codable {
     let name: String
     let version_number: String
     let changelog: String?
-    let dependencies: [String]?
-    let game_version: [String]?
+    let dependencies: [Dependency]?
+    let game_versions: [String]
     let version_type: String
     let loaders: [String]
     let featured: Bool
@@ -19,5 +19,22 @@ struct Version: Hashable, Identifiable, Codable {
     let author_id: String
     let date_published: String
     let downloads: Int
-    let files: [String]
+    let changelog_url: String?
+    let files: [File]
+}
+
+
+struct Dependency: Hashable, Codable {
+    let version_id: String?
+    let project_id: String?
+    let dependency_type: String
+}
+
+
+struct File: Hashable, Codable {
+    let hashes: [String:String]
+    let url: String
+    let filename: String
+    let primary: Bool
+    let size: Int
 }
