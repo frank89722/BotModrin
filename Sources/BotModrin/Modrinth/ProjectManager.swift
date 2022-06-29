@@ -114,7 +114,7 @@ fileprivate actor ChannelRepository {
         })
 
         Task {
-            let _ = try? db.run(channels.createIndex(projectId, channels, unique: true, ifNotExists: true))
+            let _ = try? db.run(channels.createIndex(projectId, channelId, unique: true, ifNotExists: true))
         }
     }
     
