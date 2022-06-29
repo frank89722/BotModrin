@@ -184,40 +184,38 @@ fileprivate actor ProjectUpdater {
     fileprivate func runUpdate() async {
         let apiService = ApiService.modrinth
         
-        Task {
-            guard let sequence = await projectRepo.selectAll() else { return }
+        guard let sequence = await projectRepo.selectAll() else { return }
+        
+        for row in sequence {
+            let fetchResult = await apiService.fetchApi("/project/\(row[projectRepo.id])", objectType: Project.self)
             
-            for row in sequence {
-                let fetchResult = await apiService.fetchApi("/project/\(row[projectRepo.id])", objectType: Project.self)
+            switch fetchResult {
+            case .success(let project):
+                guard row[projectRepo.lastUpdate] < project.updated.date else { continue }
                 
-                switch fetchResult {
-                case .success(let project):
-                    guard row[projectRepo.lastUpdate] < project.updated.date else { continue }
-                    
-                    guard let channels = await channelRepo.selectChannelIdsBy(project: project) else { continue }
-                    
-                    if channels.isEmpty {
-                        do {
-                            try await projectRepo.deleteBy(id: project.id)
-                        } catch {
-                            botModrin.logWarning("Failed on delete project \"\(project.id)\" in database project repository: \(error.localizedDescription)")
-                        }
-                        continue
-                    }
-                    
+                guard let channels = await channelRepo.selectChannelIdsBy(project: project) else { continue }
+                
+                if channels.isEmpty {
                     do {
-                        try await projectRepo.updateBy(project: project)
-                        await sendMessageTo(channels, project: project, localVersion: row[projectRepo.latestVersion])
+                        try await projectRepo.deleteBy(id: project.id)
                     } catch {
-                        botModrin.logWarning("Failed on update project \"\(project.id)\" in project repository: \(error.localizedDescription)")
+                        botModrin.logWarning("Failed on delete project \"\(project.id)\" in database project repository: \(error.localizedDescription)")
                     }
-                    
-                case .failure(let error):
-                    botModrin.logWarning("Project \"\(row[projectRepo.id])\" faild to fetch: \(error.localizedDescription)")
+                    continue
                 }
                 
-                try! await Task.sleep(milliseconds: 500)
+                do {
+                    try await projectRepo.updateBy(project: project)
+                    await sendMessageTo(channels, project: project, localVersion: row[projectRepo.latestVersion])
+                } catch {
+                    botModrin.logWarning("Failed on update project \"\(project.id)\" in project repository: \(error.localizedDescription)")
+                }
+                
+            case .failure(let error):
+                botModrin.logWarning("Project \"\(row[projectRepo.id])\" faild to fetch: \(error.localizedDescription)")
             }
+            
+            try! await Task.sleep(milliseconds: 500)
             
         }
     }
