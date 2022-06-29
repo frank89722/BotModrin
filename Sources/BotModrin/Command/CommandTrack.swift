@@ -12,34 +12,41 @@ import Logging
 fileprivate let apiService = ApiService.modrinth
 
 class CommandTrackAdd: Command {
-    
-    private static let instance = CommandTrackAdd()
-    
     private let logger = Logger(label: "frankv.BotModrin.CommandTrackAdd")
 
-    let key = "trackadd"
+    let key = "track"
     
-    lazy private(set) var builder = try! SlashCommandBuilder(name: self.key, description: "Track a project in this channel", defaultMemberPermissions: "16")
-        .addOption(option: try! ApplicationCommandOptions(name: "project", description: "Project id or Slug", type: .string))
+    lazy private(set) var builder = try! SlashCommandBuilder(name: self.key,
+                                                             description: "Manage Modrinth project update tracker in this channel",
+                                                             defaultMemberPermissions: "16")
+//        .addOption(option: try! ApplicationCommandOptions(name: "add", description: "Track a project in this channel ", type: .subCommand))
+        .addOption(option: try! ApplicationCommandOptions(name: "action", description: "Command action", type: .string)
+            .addChoice(name: "add", value: "add")
+            .addChoice(name: "remove", value: "remove")
+        )
+        .addOption(option: try! ApplicationCommandOptions(name: "project", description: "Project id or slug", type: .string))
     
     let projectManager = BotModrin.shared.projectManager
     
     
     func onCommandEvent(event: SlashCommandEvent) async {
-        //        try? await event.deferReply()
         event.setEphemeral(true)
         
+        let action = event.getOptionAsString(optionName: "action")
         let projectId = event.getOptionAsString(optionName: "project") ?? ""
         let fetchResult = await apiService.fetchApi("/project/\(projectId)", objectType: Project.self)
         
         switch fetchResult {
         case .success(let project):
-            do {
-                try await projectManager.add(project, channelId: event.channelId)
-            } catch {
-                try? await event.reply(message: project.title + " is already in the tracking list")
+            switch action {
+            case "add":
+                await add(event, project: project)
+                
+            case "remove":
+                await remove(event, project: project)
+            default:
+                break
             }
-            try? await event.reply(message: project.title + " is added to tracking list")
             
         case .failure(let error):
             switch error {
@@ -54,8 +61,28 @@ class CommandTrackAdd: Command {
             }
             
             try? await event.reply(message: "We have some issue...")
-            
+        }
+    }
+    
+    private func add(_ event: SlashCommandEvent, project: Project) async {
+        do {
+            try await projectManager.add(project, channelId: event.channelId)
+        } catch {
+            try? await event.reply(message: project.title + " is already in the tracking list")
         }
         
+        try? await event.reply(message: project.title + " is added to tracking list")
     }
+    
+    private func remove(_ event: SlashCommandEvent, project: Project) async {
+        do {
+            try await projectManager.remove(project.id, channelId: event.channelId)
+            try? await event.reply(message: "No longer tracking the project \"\(project.title)\" in this channel")
+        } catch QueryError.notFound {
+            try? await event.reply(message: "Project \"\(project.title)\" is not tracking in this channel")
+        } catch {
+            try? await event.reply(message: "We have some issue...")
+        }
+    }
+    
 }

@@ -10,6 +10,12 @@ import SQLite
 import Logging
 import Swiftcord
 
+
+enum QueryError: Error {
+    case notFound
+}
+
+
 class ProjectManager {
     
     private let logger = Logger(label: "frankv.BotModrin.ProjectManager")
@@ -36,6 +42,10 @@ class ProjectManager {
     func add(_ project: Project, channelId: Snowflake) async throws {
         try? await projectRepo.insert(project: project)
         try await channelRepo.insert(project: project, channelId: channelId)
+    }
+    
+    func remove(_ projectId: String, channelId: Snowflake) async throws {
+        try await channelRepo.deleteBy(projectId: projectId, channelId: channelId.rawValue.description)
     }
     
     func runUpdaterTask() {
@@ -135,28 +145,30 @@ fileprivate actor ChannelRepository {
             .map({ $0[channelId] })
     }
     
-    func selectAllBy(project: Project? = nil, projectId _projectId: String? = nil, channelId _channelId: String? = nil) -> Table? {
+    func selectAllBy(projectId _projectId: String? = nil, channelId _channelId: String? = nil) -> Table? {
         var queryResult: Table?
         
-        if let project = project {
-            queryResult = channels.filter(projectId == project.id)
-        } else if let id = _projectId {
+        if let id = _projectId {
             queryResult = channels.filter(projectId == id)
-        } else if let id = _channelId {
+        }
+        
+        if let id = _channelId {
             queryResult = channels.filter(channelId == id)
         }
         
         return queryResult
     }
     
-    func deleteBy(project: Project? = nil, projectId _projectId: String? = nil, channelId _channelId: String? = nil) throws {
-        guard let queryResult = selectAllBy(project: project, projectId: _projectId, channelId: _channelId) else { return }
+    func deleteBy(projectId _projectId: String? = nil, channelId _channelId: String? = nil) throws {
+        guard let queryResult = selectAllBy(projectId: _projectId, channelId: _channelId) else { return }
+        
+        if (try? db.scalar(queryResult.count)) == 0 {
+            throw QueryError.notFound
+        }
+        
         try db.run(queryResult.delete())
     }
     
-    func deleteBy(channelId snowflake: Snowflake) throws {
-        try deleteBy(channelId: snowflake.rawValue.description)
-    }
 }
 
 
