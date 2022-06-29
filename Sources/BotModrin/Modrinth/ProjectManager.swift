@@ -19,7 +19,10 @@ class ProjectManager {
     fileprivate let channelRepo: ChannelRepository
     private lazy var projectUpdater = ProjectUpdater(projectRepo: projectRepo, channelRepo: channelRepo)
     
+    private var updateTask: Task<(), Never>?
+    
     var doUpdate = true
+    
     
     init (_ main: BotModrin) {
         projectRepo = ProjectRepository(db: main.db!)
@@ -27,7 +30,7 @@ class ProjectManager {
     }
     
     deinit {
-        doUpdate = false
+        updateTask?.cancel()
     }
     
     func add(_ project: Project, channelId: Snowflake) async throws {
@@ -36,10 +39,12 @@ class ProjectManager {
     }
     
     func runUpdaterTask() {
-        Task(priority: .background) {
-            while doUpdate {
-                await projectUpdater.runUpdate()
-                try! await Task.sleep(nanoseconds: 10_000_000_000)
+        updateTask = Task(priority: .background) {
+            while true {
+                if doUpdate {
+                    await projectUpdater.runUpdate()
+                }
+                try! await Task.sleep(seconds: 5)
             }
         }
     }
@@ -202,7 +207,7 @@ fileprivate actor ProjectUpdater {
                     logger.warning("Project \"\(row[projectRepo.id])\" faild to fetch: \(error.localizedDescription)")
                 }
                 
-                try! await Task.sleep(nanoseconds:5_000_000_000)
+                try! await Task.sleep(milliseconds: 500)
             }
             
         }

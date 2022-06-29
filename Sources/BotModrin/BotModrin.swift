@@ -53,11 +53,16 @@ final class BotModrin {
     }
 
     fileprivate func start() {
-        swiftCord.addListeners(BotModrinListener(self))
+        swiftCord.addListeners(BotModrinListener())
         swiftCord.connect()
     }
     
+    private func registerCommand() {
+        try? commandManager.register(command: CommandTrackAdd())
+    }
+    
     fileprivate func onReady() {
+        registerCommand()
         projectManager.runUpdaterTask()
     }
     
@@ -66,17 +71,11 @@ final class BotModrin {
 
 fileprivate class BotModrinListener: ListenerAdapter {
     
-    let botModrin: BotModrin
+    private let botModrin = BotModrin.shared
     
-    
-    init(_ botModrin: BotModrin) {
-        self.botModrin = botModrin
-    }
     
     override func onReady(botUser: User) async {
-        try? botModrin.commandManager.register(command: CommandTrackAdd())
         botModrin.onReady()
-        
         botModrin.commandManager.postOnReady()
     }
     
