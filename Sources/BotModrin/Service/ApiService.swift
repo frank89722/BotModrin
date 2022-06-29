@@ -26,15 +26,20 @@ class ApiService {
         
         var (data, response): (Data?, URLResponse?)
         
-        #if os(Linux)
-        (data, response) = try! await withCheckedContinuation { continuation in
-            URLSession.shared.dataTask(with: url) { data, response, _ in
-                continuation.resume(returning: (data, response))
-            }.resume()
+        
+        do {
+            #if os(Linux)
+            (data, response) = try await withCheckedContinuation { continuation in
+                URLSession.shared.dataTask(with: url) { data, response, _ in
+                    continuation.resume(returning: (data, response))
+                }.resume()
+            }
+            #else
+            (data, response) = try await URLSession.shared.data(from: url)
+            #endif
+        } catch {
+            return .failure(error)
         }
-        #else
-        (data, response) = try! await URLSession.shared.data(from: url)
-        #endif
         
         guard let data = data, let response = response else {
             return .failure(HttpError.unknow)
