@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug BotModrin",
+            "program": ".build/debug/BotModrin",
+            "args": [],
+            "cwd": "${workspaceFolder:BotModrin}",
+            "preLaunchTask": "swift: Build Debug BotModrin"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release BotModrin",
+            "program": ".build/release/BotModrin",
+            "args": [],
+            "cwd": "${workspaceFolder:BotModrin}",
+            "preLaunchTask": "swift: Build Release BotModrin"
+        }
+    ]
+}

@@ -1,0 +1,11 @@
+version: '3'
+services:
+  bot:
+    build: .
+    environment:
+      - BM_DISCORD_BOT_TOKEN=YOUR BOT TOKEN HERE!!!!!!!!!!!!!!!!!!!!!!!!
+    volumes:
+      - bot-files:/app/bot_modrin
+
+volumes:
+  bot-files:

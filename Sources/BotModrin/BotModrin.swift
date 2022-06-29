@@ -35,15 +35,22 @@ final class BotModrin {
         let codableFiles = CodableFiles.shared
         let rootDir = Bundle.main.resourceURL!.description
         
-        do {
-            config = try codableFiles.load(objectType: Config.self, withFilename: "config", atDirectory: isDebug ? "." : rootDir)!
-        } catch {
-            logger.error("Invalid config")
-            let _ = try? codableFiles.save(object: Config(), withFilename: "config", atDirectory: isDebug ? "." : rootDir)
-            exit(78)
+        
+        if let isDocker = ProcessInfo.processInfo.environment["BM_DOCKER"], isDocker == "1" {
+            config = Config()
+            config.bot_token = ProcessInfo.processInfo.environment["BM_DISCORD_BOT_TOKEN"] ?? ""
+            config.db_dir = ProcessInfo.processInfo.environment["BM_DB_DIR"] ?? config.db_dir
+        } else {
+            do {
+                config = try codableFiles.load(objectType: Config.self, withFilename: "config", atDirectory: isDebug ? "." : rootDir)!
+            } catch {
+                logger.error("Invalid config")
+                let _ = try? codableFiles.save(object: Config(), withFilename: "config", atDirectory: isDebug ? "." : rootDir)
+                exit(78)
+            }
         }
         
-        db = try? Connection(isDebug ? .inMemory : .uri(rootDir + "/bot_modrin.db"))
+        db = try? Connection(isDebug ? .inMemory : .uri(config.db_dir))
         
         swiftCord = Swiftcord(token: config.bot_token, eventLoopGroup: .none)
     }
@@ -112,6 +119,7 @@ extension BotModrin {
 
 struct Config: Codable {
     var bot_token: String = "enter the bot token here"
+    var db_dir: String = Bundle.main.resourceURL!.description + "/bot_modrin/bot_modrin.db"
 }
 
 
