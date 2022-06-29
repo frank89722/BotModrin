@@ -20,7 +20,7 @@ final class BotModrin {
     public static let shared = BotModrin()
     #endif
     
-    let logger = Logger(label: "frankv.BotModrin.BotModrin")
+    let logger = Logger(label: "frankv.BotModrin")
     
     var config: Config
     
@@ -90,6 +90,22 @@ fileprivate class BotModrinListener: ListenerAdapter {
 extension BotModrin {
     public static func main() {
         BotModrin.shared.start()
+    }
+    
+    func logInfo(_ content: String) {
+        BotModrin.shared.logger.info("\(content)")
+    }
+    
+    func logWarning(_ content: String) {
+        BotModrin.shared.logger.warning("\(content)")
+    }
+    
+    func logError(_ content: String) {
+        BotModrin.shared.logger.error("\(content)")
+    }
+    
+    func logDebug(_ content: String) {
+        BotModrin.shared.logger.debug("\(content)")
     }
 }
 

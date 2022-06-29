@@ -7,7 +7,6 @@
 
 import Foundation
 import SQLite
-import Logging
 import Swiftcord
 
 
@@ -17,8 +16,6 @@ enum QueryError: Error {
 
 
 class ProjectManager {
-    
-    private let logger = Logger(label: "frankv.BotModrin.ProjectManager")
     
     private let apiService = ApiService.modrinth
     fileprivate let projectRepo: ProjectRepository
@@ -174,7 +171,7 @@ fileprivate actor ChannelRepository {
 
 fileprivate actor ProjectUpdater {
     
-    private let logger = Logger(label: "frankv.BotModrin.ProjectUpdater")
+    private let botModrin = BotModrin.shared
     private let projectRepo: ProjectRepository
     private let channelRepo: ChannelRepository
     
@@ -203,7 +200,7 @@ fileprivate actor ProjectUpdater {
                         do {
                             try await projectRepo.deleteBy(id: project.id)
                         } catch {
-                            //log fail to delete
+                            botModrin.logWarning("Failed on delete project \"\(project.id)\" in database project repository: \(error.localizedDescription)")
                         }
                         continue
                     }
@@ -212,11 +209,11 @@ fileprivate actor ProjectUpdater {
                         try await projectRepo.updateBy(project: project)
                         await sendMessageTo(channels, project: project)
                     } catch {
-                        //log fail to update
+                        botModrin.logWarning("Failed on update project \"\(project.id)\" in project repository: \(error.localizedDescription)")
                     }
                     
                 case .failure(let error):
-                    logger.warning("Project \"\(row[projectRepo.id])\" faild to fetch: \(error.localizedDescription)")
+                    botModrin.logWarning("Project \"\(row[projectRepo.id])\" faild to fetch: \(error.localizedDescription)")
                 }
                 
                 try! await Task.sleep(milliseconds: 500)

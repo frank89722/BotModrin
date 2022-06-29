@@ -7,12 +7,10 @@
 
 import Foundation
 import Swiftcord
-import Logging
 
 fileprivate let apiService = ApiService.modrinth
 
 class CommandTrackAdd: Command {
-    private let logger = Logger(label: "frankv.BotModrin.CommandTrackAdd")
 
     let key = "track"
     
@@ -27,7 +25,7 @@ class CommandTrackAdd: Command {
         .addOption(option: try! ApplicationCommandOptions(name: "project", description: "Project id or slug", type: .string))
     
     let projectManager = BotModrin.shared.projectManager
-    
+    let botModrin = BotModrin.shared
     
     func onCommandEvent(event: SlashCommandEvent) async {
         event.setEphemeral(true)
@@ -51,10 +49,10 @@ class CommandTrackAdd: Command {
         case .failure(let error):
             switch error {
             case HttpError.code(let code) where code == 404:
-                logger.error("Error fetching project: \(error.localizedDescription)")
                 try? await event.reply(message: "Project: \(projectId) is not found")
                 
             default:
+                botModrin.logWarning("Unknow api error in \"CommandTrack\"")
                 try? await event.reply(message: "We have some issue...")
             }
         }
