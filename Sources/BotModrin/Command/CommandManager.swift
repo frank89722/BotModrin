@@ -46,7 +46,7 @@ class CommandManager {
                     return builder.name == cmd.name &&
                     builder.defaultMemberPermissions == cmd.defaultMemberPermissions &&
                     builder.description == cmd.description &&
-                    builder.options == cmd.options
+                    ((builder.options.isEmpty && cmd.options == nil) || (builder.options == cmd.options))
                 })
                 
                 if !existed {
