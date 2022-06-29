@@ -45,6 +45,20 @@ class ProjectManager {
         try await channelRepo.deleteBy(projectId: projectId, channelId: channelId.rawValue.description)
     }
     
+    func getChannelTracking(_ channel: Snowflake) throws -> [String] {
+        let db = BotModrin.shared.db!
+        let query = projectRepo.projects
+            .select(projectRepo.id)
+            .join(channelRepo.channels, on: channelRepo.channelId == channel.rawValue.description)
+        
+        let seq = try db.prepare(query)
+        let result = seq.map { $0[projectRepo.id] }
+        
+        if result.isEmpty { throw QueryError.notFound }
+        
+        return result
+    }
+    
     func runUpdaterTask() {
         updateTask = Task(priority: .background) {
             while true {

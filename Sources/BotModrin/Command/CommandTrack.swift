@@ -10,11 +10,11 @@ import Swiftcord
 
 fileprivate let apiService = ApiService.modrinth
 
-class CommandTrackAdd: Command {
+class CommandTrack: Command {
 
     let key = "track"
     
-    lazy private(set) var builder = try! SlashCommandBuilder(name: self.key,
+    private(set) lazy var builder = try! SlashCommandBuilder(name: self.key,
                                                              description: "Manage Modrinth project update tracker in this channel",
                                                              defaultMemberPermissions: "16")
 //        .addOption(option: try! ApplicationCommandOptions(name: "add", description: "Track a project in this channel ", type: .subCommand))
@@ -89,5 +89,33 @@ class CommandTrackAdd: Command {
             try? await event.reply(message: "We have some issue...")
         }
     }
+    
+}
+
+
+/// This will be merge into `CommandTrack` after sub-command works in Swiftcord
+class CommandShowTracking: Command {
+    
+    let key = "showtracking"
+    
+    private(set) lazy var builder = try! SlashCommandBuilder(name: self.key,
+                                                             description: "Show projects that tracking in this channel",
+                                                             defaultMemberPermissions: "16")
+    
+    let projectManager = BotModrin.shared.projectManager
+    let botModrin = BotModrin.shared
+    
+    
+    func onCommandEvent(event: SlashCommandEvent) async {
+        event.setEphemeral(true)
+        
+        do {
+            let channels = try projectManager.getChannelTracking(event.channelId)
+            try? await event.reply(message: channels.joined(separator: ", "))
+        } catch {
+            try? await event.reply(message: "No project is tracking in this channel")
+        }
+    }
+    
     
 }

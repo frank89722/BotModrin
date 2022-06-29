@@ -65,7 +65,8 @@ final class BotModrin {
     }
     
     private func registerCommand() {
-        try? commandManager.register(command: CommandTrackAdd())
+        try? commandManager.register(command: CommandTrack())
+        try? commandManager.register(command: CommandShowTracking())
     }
     
     fileprivate func onReady() {
