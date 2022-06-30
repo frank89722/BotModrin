@@ -158,22 +158,22 @@ fileprivate actor ChannelRepository {
             .map({ $0[projectId] })
     }
     
-    func selectAllBy(projectId _projectId: String? = nil, channelId _channelId: String? = nil) -> Table? {
-        var queryResult: Table?
+    func selectAllBy(projectId _projectId: String? = nil, channelId _channelId: String? = nil) -> Table {
+        var queryResult = channels
         
         if let id = _projectId {
-            queryResult = channels.filter(projectId == id)
+            queryResult = queryResult.filter(projectId == id)
         }
         
         if let id = _channelId {
-            queryResult = channels.filter(channelId == id)
+            queryResult = queryResult.filter(channelId == id)
         }
         
         return queryResult
     }
     
     func deleteBy(projectId _projectId: String? = nil, channelId _channelId: String? = nil) throws {
-        guard let queryResult = selectAllBy(projectId: _projectId, channelId: _channelId) else { return }
+        let queryResult = selectAllBy(projectId: _projectId, channelId: _channelId)
         
         if (try? db.scalar(queryResult.count)) == 0 {
             throw QueryError.notFound
