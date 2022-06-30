@@ -20,7 +20,7 @@ final class BotModrin {
     public static let shared = BotModrin()
     #endif
     
-    let logger = Logger(label: "frankv.BotModrin")
+    var logger = Logger(label: "me.frankv.BotModrin")
     
     var config: Config
     
@@ -35,6 +35,7 @@ final class BotModrin {
         let codableFiles = CodableFiles.shared
         let rootDir = Bundle.main.resourceURL!.description
         
+        logger.logLevel = .info
         
         if let isDocker = ProcessInfo.processInfo.environment["BM_DOCKER"], isDocker == "1" {
             config = Config()
@@ -100,20 +101,20 @@ extension BotModrin {
         BotModrin.shared.start()
     }
     
-    func logInfo(_ content: String) {
-        BotModrin.shared.logger.info("\(content)")
+    func logInfo(_ content: String, file: String = #file, function: String = #function, line: UInt = #line) {
+        BotModrin.shared.logger.info("\(content)", file: file, function: function, line: line)
     }
     
-    func logWarning(_ content: String) {
-        BotModrin.shared.logger.warning("\(content)")
+    func logWarning(_ content: String, file: String = #file, function: String = #function, line: UInt = #line) {
+        BotModrin.shared.logger.warning("\(content)", file: file, function: function, line: line)
     }
     
-    func logError(_ content: String) {
-        BotModrin.shared.logger.error("\(content)")
+    func logError(_ content: String, file: String = #file, function: String = #function, line: UInt = #line) {
+        BotModrin.shared.logger.error("\(content)", file: file, function: function, line: line)
     }
     
-    func logDebug(_ content: String) {
-        BotModrin.shared.logger.debug("\(content)")
+    func logDebug(_ content: String, file: String = #file, function: String = #function, line: UInt = #line) {
+        BotModrin.shared.logger.debug("\(content)", file: file, function: function, line: line)
     }
 }
 
