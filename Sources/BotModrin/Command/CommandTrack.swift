@@ -110,7 +110,7 @@ class CommandShowTracking: Command {
         event.setEphemeral(true)
         
         do {
-            let channels = try projectManager.getChannelTracking(event.channelId)
+            let channels = try await projectManager.getChannelTracking(event.channelId)
             try? await event.reply(message: channels.joined(separator: ", "))
         } catch {
             try? await event.reply(message: "No project is tracking in this channel")

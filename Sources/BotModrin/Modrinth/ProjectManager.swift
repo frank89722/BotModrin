@@ -45,16 +45,12 @@ class ProjectManager {
         try await channelRepo.deleteBy(projectId: projectId, channelId: channelId.rawValue.description)
     }
     
-    func getChannelTracking(_ channel: Snowflake) throws -> [String] {
-        let db = BotModrin.shared.db!
-        let query = channelRepo.channels
-            .select(channelRepo.projectId)
-            .filter(channelRepo.channelId == channel.rawValue.description)
-        
-        let seq = try db.prepare(query)
-        let result = seq.map { $0[channelRepo.projectId] }
-        
-        if result.isEmpty { throw QueryError.notFound }
+    func getChannelTracking(_ channel: Snowflake) async throws -> [String] {
+        guard let result = await channelRepo
+            .selectProjectIdsBy(channelId: channel.rawValue.description), !result.isEmpty
+        else {
+            throw QueryError.notFound
+        }
         
         return result
     }
@@ -155,6 +151,11 @@ fileprivate actor ChannelRepository {
     func selectChannelIdsBy(project: Project) -> [String]? {
         return try? db.prepare(channels.select(channelId).where(projectId == project.id))
             .map({ $0[channelId] })
+    }
+    
+    func selectProjectIdsBy(channelId cId: String) -> [String]? {
+        return try? db.prepare(channels.select(projectId).where(channelId == cId))
+            .map({ $0[projectId] })
     }
     
     func selectAllBy(projectId _projectId: String? = nil, channelId _channelId: String? = nil) -> Table? {
