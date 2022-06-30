@@ -66,7 +66,7 @@ class CommandTrack: Command {
             let v = versions[0]
             
             do {
-                try await projectManager.add(project, latestVersion: v.id, channelId: event.channelId)
+                try await projectManager.add(project, latestVersion: v.id, channelId: event.channelId, ownerId: event.user.id)
                 try? await event.reply(message: project.title + " is added to tracking list")
             } catch {
                 try? await event.reply(message: project.title + " is already in the tracking list")

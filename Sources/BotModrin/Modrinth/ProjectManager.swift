@@ -36,9 +36,9 @@ class ProjectManager {
         updateTask?.cancel()
     }
     
-    func add(_ project: Project, latestVersion: String, channelId: Snowflake) async throws {
+    func add(_ project: Project, latestVersion: String, channelId: Snowflake, ownerId: Snowflake) async throws {
         try? await projectRepo.insert(project: project, latestVersion: latestVersion)
-        try await channelRepo.insert(project: project, channelId: channelId)
+        try await channelRepo.insert(project: project, channelId: channelId, ownerId: ownerId)
     }
     
     func remove(_ projectId: String, channelId: Snowflake) async throws {
@@ -126,6 +126,7 @@ fileprivate actor ChannelRepository {
     
     let projectId = Expression<String>("projectId")
     let channelId = Expression<String>("channelId")
+    let ownerId = Expression<String>("ownerId")
     
     
     fileprivate init(db: Connection) {
@@ -134,6 +135,7 @@ fileprivate actor ChannelRepository {
         let _ = try? db.run(channels.create(ifNotExists: true) { t in
             t.column(projectId)
             t.column(channelId)
+            t.column(ownerId)
         })
 
         Task {
@@ -141,10 +143,11 @@ fileprivate actor ChannelRepository {
         }
     }
     
-    func insert(project p: Project, channelId snowflake: Snowflake) throws {
+    func insert(project p: Project, channelId cId: Snowflake, ownerId oId: Snowflake) throws {
         try db.run(channels.insert(or: .fail,
             projectId <- p.id,
-            channelId <- snowflake.rawValue.description
+            channelId <- cId.rawValue.description,
+            ownerId <- oId.rawValue.description
         ))
     }
     
