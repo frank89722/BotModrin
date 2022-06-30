@@ -7,7 +7,6 @@
 
 import Foundation
 import Swiftcord
-import Logging
 
 enum CommandError: Error {
     case registerError(String)
@@ -23,16 +22,16 @@ protocol Command {
 
 class CommandManager {
     
-    private let logger = Logger(label: "frankv.BotModrin.CommandManager")
-    
     private(set) var commands = [String: Command]()
     private(set) var registerDisabled = false
+    
+    let botModrin = BotModrin.shared
     
     func register(command: Command) throws {
         guard !registerDisabled else { throw CommandError.registerError("Register has been disabled") }
         
         if commands[command.key] != nil {
-            logger.error("Faild to register command \"\(command.key)\": Command already existed.")
+            botModrin.logError("Faild to register command \"\(command.key)\": Command already existed.")
             throw CommandError.registerError("Command already existed.")
         }
         
@@ -51,12 +50,12 @@ class CommandManager {
                 
                 if !existed {
                     try await swiftCord.uploadSlashCommand(commandData: command.builder)
-                    logger.info("Command \"\(command.key)\" has been upload to discord.")
+                    botModrin.logInfo("Command \"\(command.key)\" has been upload to discord.")
                 }
                 
-                logger.info("Command \"\(command.key)\" is registered.")
+                botModrin.logInfo("Command \"\(command.key)\" is registered.")
             } catch {
-                logger.info("Faild to register command \"\(command.key)\": \(error.localizedDescription)")
+                botModrin.logError("Faild to register command \"\(command.key)\": \(error.localizedDescription)")
                 throw error
             }
         }
