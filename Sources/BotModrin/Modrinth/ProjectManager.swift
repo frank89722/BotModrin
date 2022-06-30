@@ -47,12 +47,12 @@ class ProjectManager {
     
     func getChannelTracking(_ channel: Snowflake) throws -> [String] {
         let db = BotModrin.shared.db!
-        let query = projectRepo.projects
-            .select(projectRepo.id)
-            .join(channelRepo.channels, on: channelRepo.channelId == channel.rawValue.description)
+        let query = channelRepo.channels
+            .select(channelRepo.projectId)
+            .filter(channelRepo.channelId == channel.rawValue.description)
         
         let seq = try db.prepare(query)
-        let result = seq.map { $0[projectRepo.id] }
+        let result = seq.map { $0[channelRepo.projectId] }
         
         if result.isEmpty { throw QueryError.notFound }
         
