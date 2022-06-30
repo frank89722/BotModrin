@@ -104,7 +104,7 @@ fileprivate actor ProjectRepository {
     
     func updateBy(project: Project) throws {
         let queryResult = projects.filter(id == project.id)
-        try db.run(queryResult.update(lastUpdate <- project.updated.date, latestVersion <- project.versions.last!))
+        try db.run(queryResult.update(lastUpdate <- project.updated.date, title <- project.title, latestVersion <- project.versions.last!))
     }
     
     func selectAll() -> AnySequence<Row>? {
