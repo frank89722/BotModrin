@@ -59,7 +59,7 @@ class ProjectManager {
         updateTask = Task(priority: .background) {
             while true {
                 if doUpdate {
-                    BotModrin.shared.logDebug("Starting to runUpdate")
+                    BotModrin.shared.logInfo("Starting to runUpdate")
                     await projectUpdater.runUpdate()
                 }
                 try! await Task.sleep(seconds: 30)
