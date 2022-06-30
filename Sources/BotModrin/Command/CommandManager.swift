@@ -69,6 +69,7 @@ class CommandManager {
         let commands = BotModrin.shared.commandManager.commands
         
         if commands.keys.contains(event.name) {
+            BotModrin.shared.logInfo("Run command \"\(event.name)\" from \(event.channelId.rawValue) by \(event.user.username ?? "unknown")#\(event.user.discriminator ?? "unknown")")
             try? await event.deferReply()
             await commands[event.name]!.onCommandEvent(event: event)
         }
