@@ -227,7 +227,14 @@ fileprivate actor ProjectUpdater {
                 }
                 
             case .failure(let error):
-                botModrin.logWarning("Project \"\(row[projectRepo.id])\" faild to fetch: \(error.localizedDescription)")
+                switch error {
+                case HttpError.code(let code):
+                    botModrin.logWarning("Project \"\(row[projectRepo.id])\" faild to fetch with code \(code): \(error.localizedDescription)")
+                    
+                default:
+                    botModrin.logWarning("Project \"\(row[projectRepo.id])\" faild to fetch: \(error.localizedDescription)")
+                }
+                
             }
             
             try! await Task.sleep(milliseconds: 500)
