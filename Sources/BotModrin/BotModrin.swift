@@ -35,7 +35,7 @@ final class BotModrin {
         let codableFiles = CodableFiles.shared
         let rootDir = Bundle.main.resourceURL!.description
         
-        logger.logLevel = .info
+        logger.logLevel = isDebug ? .debug : .info
         
         if let isDocker = ProcessInfo.processInfo.environment["BM_DOCKER"], isDocker == "1" {
             config = Config()
@@ -52,6 +52,7 @@ final class BotModrin {
         }
         
         db = try? Connection(isDebug ? .inMemory : .uri(config.db_dir))
+//        db = try? Connection(.uri("/Users/frankv/Documents/asd.db"))
         
         swiftCord = Swiftcord(token: config.bot_token, eventLoopGroup: .none)
     }

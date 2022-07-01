@@ -25,9 +25,10 @@ class CommandManager {
     private(set) var commands = [String: Command]()
     private(set) var registerDisabled = false
     
-    let botModrin = BotModrin.shared
     
     func register(command: Command) throws {
+        let botModrin = BotModrin.shared
+        
         guard !registerDisabled else { throw CommandError.registerError("Register has been disabled") }
         
         if commands[command.key] != nil {

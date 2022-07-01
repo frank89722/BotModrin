@@ -37,16 +37,16 @@ class ProjectManager {
     }
     
     func add(_ project: Project, latestVersion: String, channelId: Snowflake, ownerId: Snowflake) async throws {
-        try? await projectRepo.insert(project: project, latestVersion: latestVersion)
-        try await channelRepo.insert(project: project, channelId: channelId, ownerId: ownerId)
+        try? projectRepo.insert(project: project, latestVersion: latestVersion)
+        try channelRepo.insert(project: project, channelId: channelId, ownerId: ownerId)
     }
     
     func remove(_ projectId: String, channelId: Snowflake) async throws {
-        try await channelRepo.deleteBy(projectId: projectId, channelId: channelId.rawValue.description)
+        try channelRepo.deleteBy(projectId: projectId, channelId: channelId.rawValue.description)
     }
     
     func getChannelTracking(_ channel: Snowflake) async throws -> [String] {
-        guard let result = await channelRepo
+        guard let result = channelRepo
             .selectProjectIdsBy(channelId: channel.rawValue.description), !result.isEmpty
         else {
             throw QueryError.notFound
@@ -70,7 +70,7 @@ class ProjectManager {
 }
 
 
-fileprivate actor ProjectRepository {
+fileprivate class ProjectRepository {
     
     let db: Connection
     
@@ -85,7 +85,7 @@ fileprivate actor ProjectRepository {
     fileprivate init(db: Connection) {
         self.db = db
         
-        let _ = try? db.run(projects.create(ifNotExists: true) { t in
+        _ = try? self.db.run(projects.create(ifNotExists: true) { t in
             t.column(id, primaryKey: true)
             t.column(title)
             t.column(latestVersion)
@@ -118,7 +118,7 @@ fileprivate actor ProjectRepository {
 }
 
 
-fileprivate actor ChannelRepository {
+fileprivate class ChannelRepository {
     
     let db: Connection
     
@@ -128,19 +128,16 @@ fileprivate actor ChannelRepository {
     let channelId = Expression<String>("channelId")
     let ownerId = Expression<String>("ownerId")
     
-    
     fileprivate init(db: Connection) {
         self.db = db
         
-        let _ = try? db.run(channels.create(ifNotExists: true) { t in
+        _ = try? self.db.run(channels.create(ifNotExists: true) { t in
             t.column(projectId)
             t.column(channelId)
             t.column(ownerId)
         })
-
-        Task {
-            let _ = try? db.run(channels.createIndex(projectId, channelId, unique: true, ifNotExists: true))
-        }
+        
+        _ = try? self.db.run(channels.createIndex(projectId, channelId, unique: true, ifNotExists: true))
     }
     
     func insert(project p: Project, channelId cId: Snowflake, ownerId oId: Snowflake) throws {
@@ -203,20 +200,21 @@ fileprivate actor ProjectUpdater {
     fileprivate func runUpdate() async {
         let apiService = ApiService.modrinth
         
-        guard let sequence = await projectRepo.selectAll() else { return }
+        guard let sequence = projectRepo.selectAll() else { return }
         
         for row in sequence {
+            botModrin.logDebug("updating \(row[projectRepo.title])")
             let fetchResult = await apiService.fetchApi("/project/\(row[projectRepo.id])", objectType: Project.self)
             
             switch fetchResult {
             case .success(let project):
                 guard row[projectRepo.lastUpdate] < project.updated.date else { continue }
                 
-                guard let channels = await channelRepo.selectChannelIdsBy(project: project) else { continue }
+                guard let channels = channelRepo.selectChannelIdsBy(project: project) else { continue }
                 
                 if channels.isEmpty {
                     do {
-                        try await projectRepo.deleteBy(id: project.id)
+                        try projectRepo.deleteBy(id: project.id)
                     } catch {
                         botModrin.logWarning("Failed on delete project \"\(project.id)\" in database project repository: \(error.localizedDescription)")
                     }
@@ -224,7 +222,7 @@ fileprivate actor ProjectUpdater {
                 }
                 
                 do {
-                    try await projectRepo.updateBy(project: project)
+                    try projectRepo.updateBy(project: project)
                     await sendMessageTo(channels, project: project, localVersion: row[projectRepo.latestVersion])
                 } catch {
                     botModrin.logWarning("Failed on update project \"\(project.id)\" in project repository: \(error.localizedDescription)")
@@ -233,10 +231,10 @@ fileprivate actor ProjectUpdater {
             case .failure(let error):
                 switch error {
                 case HttpError.code(let code):
-                    botModrin.logWarning("Project \"\(row[projectRepo.id])\" faild to fetch with code \(code): \(error.localizedDescription)")
+                    botModrin.logWarning("Project \"\(row[projectRepo.id])\" faild to fetch with code \(code): \(error)")
                     
                 default:
-                    botModrin.logWarning("Project \"\(row[projectRepo.id])\" faild to fetch: \(error.localizedDescription)")
+                    botModrin.logWarning("Project \"\(row[projectRepo.id])\" faild to fetch: \(error)")
                 }
                 
             }
@@ -259,7 +257,7 @@ fileprivate actor ProjectUpdater {
             }
             
         case .failure(let error):
-            botModrin.logWarning("Failed on fetching Version data from modrinth: \(error.localizedDescription)")
+            botModrin.logWarning("Failed on fetching Version data from modrinth: \(error)")
         }
         
         for embed in embeds {
