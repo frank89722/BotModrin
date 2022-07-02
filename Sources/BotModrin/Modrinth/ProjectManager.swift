@@ -251,8 +251,18 @@ fileprivate actor ProjectUpdater {
         
         switch fetchResult {
         case .success(let versions):
+            var newVersions = [Version]()
             for v in versions {
                 guard v.id != localVersion else { break }
+                newVersions.append(v)
+            }
+            
+            if newVersions.count == versions.count {
+                embeds.append(createEmbed(project: project, version: versions[0]))
+                break
+            }
+            
+            for v in newVersions {
                 embeds.append(createEmbed(project: project, version: v))
             }
             
