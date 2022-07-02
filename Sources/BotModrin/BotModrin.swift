@@ -22,6 +22,8 @@ final class BotModrin {
     
     var logger = Logger(label: "me.frankv.BotModrin")
     
+    var swiftcordLogger = Logger(label: "Swiftcord")
+    
     var config: Config
     
     let swiftCord: Swiftcord
@@ -37,6 +39,8 @@ final class BotModrin {
         
         logger.logLevel = isDebug ? .debug : .info
         
+        swiftcordLogger.logLevel = .trace
+        
         if let isDocker = ProcessInfo.processInfo.environment["BM_DOCKER"], isDocker == "1" {
             config = Config()
             config.bot_token = ProcessInfo.processInfo.environment["BM_DISCORD_BOT_TOKEN"] ?? ""
@@ -50,11 +54,11 @@ final class BotModrin {
                 exit(78)
             }
         }
-        
+         
         db = try? Connection(isDebug ? .inMemory : .uri(config.db_dir))
 //        db = try? Connection(.uri("/Users/frankv/Documents/asd.db"))
         
-        swiftCord = Swiftcord(token: config.bot_token, eventLoopGroup: .none)
+        swiftCord = Swiftcord(token: config.bot_token, logger: self.swiftcordLogger, eventLoopGroup: .none)
     }
     
     deinit {
