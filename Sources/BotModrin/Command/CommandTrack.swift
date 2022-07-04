@@ -43,7 +43,7 @@ class CommandTrack: Command {
         }
         
         if event.getOptionAsSlashCommandEventOptions(optionName: "removeall") != nil {
-            
+            await removeAll(event)
             return
         }
         
@@ -119,6 +119,14 @@ class CommandTrack: Command {
         do {
             let channels = try await projectManager.getChannelTracking(event.channelId)
             try? await event.reply(message: channels.joined(separator: ", "))
+        } catch {
+            try? await event.reply(message: "No project is tracking in this channel")
+        }
+    }
+    
+    private func removeAll(_ event: SlashCommandEvent) async {
+        do {
+            try await projectManager.removeAll(in: event.channelId.rawValue.description)
         } catch {
             try? await event.reply(message: "No project is tracking in this channel")
         }

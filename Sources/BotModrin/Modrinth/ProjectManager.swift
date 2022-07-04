@@ -45,6 +45,10 @@ class ProjectManager {
         try channelRepo.deleteBy(projectId: projectId, channelId: channelId.rawValue.description)
     }
     
+    func removeAll(in channelId: String) async throws {
+        try channelRepo.deleteBy(channelId: channelId)
+    }
+    
     func getChannelTracking(_ channel: Snowflake) async throws -> [String] {
         guard let result = channelRepo
             .selectProjectIdsBy(channelId: channel.rawValue.description), !result.isEmpty
