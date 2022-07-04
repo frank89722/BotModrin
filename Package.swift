@@ -11,7 +11,7 @@ let package = Package(
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
-        .package(url: "https://github.com/SketchMaster2001/Swiftcord", branch: "master"),
+        .package(url: "https://github.com/frank89722/Swiftcord", branch: "temp"),
         .package(url: "https://github.com/stephencelis/SQLite.swift.git", from: "0.13.3"),
         .package(url: "https://github.com/frank89722/CodableFiles", branch: "fix"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.4.2"),

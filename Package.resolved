@@ -57,10 +57,10 @@
     {
       "identity" : "swiftcord",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/SketchMaster2001/Swiftcord",
+      "location" : "https://github.com/frank89722/Swiftcord",
       "state" : {
-        "branch" : "master",
-        "revision" : "c6c5d2cc2af2b77e7100508310c0b67ad5c55e22"
+        "branch" : "temp",
+        "revision" : "72ca5f777b7639737e1e2522b1c2eac20346e76a"
       }
     },
     {
