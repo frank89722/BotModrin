@@ -106,9 +106,9 @@ fileprivate class ProjectRepository {
         ))
     }
     
-    func updateBy(project: Project) throws {
+    func updateBy(project: Project, latestVersion v: String) throws {
         let queryResult = projects.filter(id == project.id)
-        try db.run(queryResult.update(lastUpdate <- project.updated.date, title <- project.title, latestVersion <- project.versions.last!))
+        try db.run(queryResult.update(lastUpdate <- project.updated.date, title <- project.title, latestVersion <- v))
     }
     
     func selectAll() -> AnySequence<Row>? {
@@ -208,9 +208,10 @@ fileprivate actor ProjectUpdater {
         
         for row in sequence {
             botModrin.logDebug("updating \(row[projectRepo.title])")
-            let fetchResult = await apiService.fetchApi("/project/\(row[projectRepo.id])", objectType: Project.self)
             
-            switch fetchResult {
+            let projectFetched = await apiService.fetchApi("/project/\(row[projectRepo.id])", objectType: Project.self)
+           
+            switch projectFetched {
             case .success(let project):
                 guard row[projectRepo.lastUpdate] < project.updated.date else { continue }
                 
@@ -226,10 +227,17 @@ fileprivate actor ProjectUpdater {
                 }
                 
                 do {
-                    try projectRepo.updateBy(project: project)
-                    await sendMessageTo(channels, project: project, localVersion: row[projectRepo.latestVersion])
+                    let versionFetched = await apiService.fetchApi("/project/\(project.id)/version", objectType: [Version].self)
+                    
+                    switch versionFetched {
+                    case .success(let version):
+                        try projectRepo.updateBy(project: project, latestVersion: version[0].id)
+                    case .failure(let error):
+                        botModrin.logWarning("Failed fetching version on update project \"\(project.id)\" in project repository: \(error)")
+                        await sendMessageTo(channels, project: project, localVersion: row[projectRepo.latestVersion])
+                    }
                 } catch {
-                    botModrin.logWarning("Failed on update project \"\(project.id)\" in project repository: \(error.localizedDescription)")
+                    botModrin.logWarning("Failed fetching project on update project \"\(project.id)\" in project repository: \(error)")
                 }
                 
             case .failure(let error):
