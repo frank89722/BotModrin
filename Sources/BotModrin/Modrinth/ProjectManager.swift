@@ -232,9 +232,9 @@ fileprivate actor ProjectUpdater {
                     switch versionFetched {
                     case .success(let version):
                         try projectRepo.updateBy(project: project, latestVersion: version[0].id)
+                        await sendMessageTo(channels, project: project, localVersion: row[projectRepo.latestVersion])
                     case .failure(let error):
                         botModrin.logWarning("Failed fetching version on update project \"\(project.id)\" in project repository: \(error)")
-                        await sendMessageTo(channels, project: project, localVersion: row[projectRepo.latestVersion])
                     }
                 } catch {
                     botModrin.logWarning("Failed fetching project on update project \"\(project.id)\" in project repository: \(error)")
