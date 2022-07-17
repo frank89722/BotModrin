@@ -47,7 +47,7 @@ final class BotModrin {
             config.db_dir = ProcessInfo.processInfo.environment["BM_DB_DIR"] ?? config.db_dir
         } else {
             do {
-                config = try codableFiles.load(objectType: Config.self, withFilename: "config", atDirectory: isDebug ? "." : rootDir)!
+                config = try codableFiles.load(objectType: Config.self, withFilename: "config", atDirectory: isDebug ? "." : rootDir)
             } catch {
                 logger.error("Invalid config")
                 let _ = try? codableFiles.save(object: Config(), withFilename: "config", atDirectory: isDebug ? "." : rootDir)

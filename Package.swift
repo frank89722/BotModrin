@@ -13,7 +13,7 @@ let package = Package(
         // .package(url: /* package url */, from: "1.0.0"),
         .package(url: "https://github.com/frank89722/Swiftcord", branch: "temp"),
         .package(url: "https://github.com/stephencelis/SQLite.swift.git", from: "0.13.3"),
-        .package(url: "https://github.com/frank89722/CodableFiles", branch: "fix"),
+        .package(url: "https://github.com/egzonpllana/CodableFiles.git", from: "1.0.2"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.4.2"),
     ],
     targets: [
