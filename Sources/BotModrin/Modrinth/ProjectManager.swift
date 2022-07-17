@@ -99,11 +99,11 @@ fileprivate class ProjectRepository {
     
     func insert(project p: Project, latestVersion v: String) throws {
         try db.run(projects.insert(or: .fail,
-            id <- p.id,
-            title <- p.title,
-            latestVersion <- v,
-            lastUpdate <- p.updated.date
-        ))
+                                   id <- p.id,
+                                   title <- p.title,
+                                   latestVersion <- v,
+                                   lastUpdate <- p.updated.date
+                                  ))
     }
     
     func updateBy(project: Project, latestVersion v: String) throws {
@@ -113,6 +113,11 @@ fileprivate class ProjectRepository {
     
     func selectAll() -> AnySequence<Row>? {
         return try? db.prepare(projects)
+    }
+    
+    func selectLatestVersionBy(id: String) -> String? {
+        return try? db.prepare(projects.select(latestVersion).where(self.id == id))
+            .map { $0[latestVersion] }.first
     }
     
     func deleteBy(id _id: String) throws {
@@ -146,10 +151,10 @@ fileprivate class ChannelRepository {
     
     func insert(project p: Project, channelId cId: Snowflake, ownerId oId: Snowflake) throws {
         try db.run(channels.insert(or: .fail,
-            projectId <- p.id,
-            channelId <- cId.rawValue.description,
-            ownerId <- oId.rawValue.description
-        ))
+                                   projectId <- p.id,
+                                   channelId <- cId.rawValue.description,
+                                   ownerId <- oId.rawValue.description
+                                  ))
     }
     
     func selectChannelIdsBy(project: Project) -> [String]? {
@@ -205,58 +210,64 @@ fileprivate actor ProjectUpdater {
         let apiService = ApiService.modrinth
         
         guard let sequence = projectRepo.selectAll() else { return }
+        let projects = sequence.map { ($0[projectRepo.id], $0[projectRepo.lastUpdate]) }
+        let projectsUpdated = await checkProjectUpdate(projects)
         
-        for row in sequence {
-            botModrin.logDebug("updating \(row[projectRepo.title])")
-            
-            let projectFetched = await apiService.fetchApi("/project/\(row[projectRepo.id])", objectType: Project.self)
-           
-            switch projectFetched {
-            case .success(let project):
-                guard row[projectRepo.lastUpdate] < project.updated.date else { continue }
-                
+        for project in projectsUpdated {
+            do {
+                let versionFetched = await apiService.fetchApi("/project/\(project.id)/version", objectType: [Version].self)
                 guard let channels = channelRepo.selectChannelIdsBy(project: project) else { continue }
                 
-                if channels.isEmpty {
-                    do {
-                        try projectRepo.deleteBy(id: project.id)
-                    } catch {
-                        botModrin.logWarning("Failed on delete project \"\(project.id)\" in database project repository: \(error.localizedDescription)")
-                    }
-                    continue
-                }
-                
-                do {
-                    let versionFetched = await apiService.fetchApi("/project/\(project.id)/version", objectType: [Version].self)
+                switch versionFetched {
+                case .success(let version):
+                    await sendMessageTo(channels, project: project)
+                    try projectRepo.updateBy(project: project, latestVersion: version[0].id)
+                    botModrin.logInfo("Project '\(project.title)' has been updated.")
                     
-                    switch versionFetched {
-                    case .success(let version):
-                        try projectRepo.updateBy(project: project, latestVersion: version[0].id)
-                        await sendMessageTo(channels, project: project, localVersion: row[projectRepo.latestVersion])
-                    case .failure(let error):
-                        botModrin.logWarning("Failed fetching version on update project \"\(project.id)\" in project repository: \(error)")
+                case .failure(let error):
+                    botModrin.logWarning("Failed fetching version on update project \"\(project.id)\" in project repository: \(error)")
+                }
+            } catch {
+                botModrin.logWarning("Failed fetching project on update project \"\(project.id)\" in project repository: \(error)")
+            }
+
+        }
+        
+    }
+    
+    private func checkProjectUpdate(_ data: [(String, Date)]) async -> [Project] {
+        let fetchSize = 10
+        
+        var result = [Project]()
+        let data = data.chunked(into: fetchSize)
+        let apiService = ApiService.modrinth
+        
+        for chunk in data {
+            let idString = chunk.map { $0.0 }.description
+                .replacingOccurrences(of: " ", with: "")
+                .replacingOccurrences(of: "\"", with: "%22")
+            let fetched = await apiService.fetchApi("/projects?ids=\(idString)", objectType: [Project].self)
+            
+            switch fetched {
+            case .success(let projects):
+                for i in 0..<fetchSize {
+                    guard i < projects.count else { break }
+                    if projects[i].updated.date > chunk[i].1 {
+                        result.append(projects[i])
                     }
-                } catch {
-                    botModrin.logWarning("Failed fetching project on update project \"\(project.id)\" in project repository: \(error)")
                 }
                 
             case .failure(let error):
-                switch error {
-                case HttpError.code(let code):
-                    botModrin.logWarning("Project \"\(row[projectRepo.id])\" faild to fetch with code \(code): \(error)")
-                    
-                default:
-                    botModrin.logWarning("Project \"\(row[projectRepo.id])\" faild to fetch: \(error)")
-                }
-                
+                botModrin.logWarning("\(error)")
             }
             
             try! await Task.sleep(milliseconds: 500)
-            
         }
+        
+        return result
     }
     
-    private func sendMessageTo(_ channelIds: [String], project: Project, localVersion: String) async {
+    private func sendMessageTo(_ channelIds: [String], project: Project) async {
         let bot = botModrin.swiftCord
         let fetchResult = await ApiService.modrinth.fetchApi("/project/\(project.id)/version", objectType: [Version].self)
         var embeds = [EmbedBuilder]()
@@ -265,7 +276,7 @@ fileprivate actor ProjectUpdater {
         case .success(let versions):
             var newVersions = [Version]()
             for v in versions {
-                guard v.id != localVersion else { break }
+                guard v.id != projectRepo.selectLatestVersionBy(id: project.id) else { break }
                 newVersions.append(v)
             }
             
@@ -285,7 +296,7 @@ fileprivate actor ProjectUpdater {
         for embed in embeds {
             for channelId in channelIds {
                 guard let channelIdUInt = UInt64(channelId) else { continue }
-                let _ = try? await bot.send(embed, to: Snowflake(rawValue: channelIdUInt))
+                _ = try? await bot.send(embed, to: Snowflake(rawValue: channelIdUInt))
             }
         }
     }
