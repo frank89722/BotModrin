@@ -66,7 +66,7 @@ class ProjectManager {
                     BotModrin.shared.logInfo("Starting to runUpdate")
                     await projectUpdater.runUpdate()
                 }
-                try! await Task.sleep(seconds: 30)
+                try! await Task.sleep(seconds: 180)
             }
         }
     }
