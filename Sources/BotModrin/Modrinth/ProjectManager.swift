@@ -247,13 +247,13 @@ fileprivate actor ProjectUpdater {
                 .replacingOccurrences(of: " ", with: "")
                 .replacingOccurrences(of: "\"", with: "%22")
             let fetched = await apiService.fetchApi("/projects?ids=\(idString)", objectType: [Project].self)
+            let mappedChunk = chunk.reduce(into: [String: Date]()) { $0[$1.0] = $1.1 }
             
             switch fetched {
             case .success(let projects):
-                for i in 0..<fetchSize {
-                    guard i < projects.count else { break }
-                    if projects[i].updated.date > chunk[i].1 {
-                        result.append(projects[i])
+                for project in projects {
+                    if project.updated.date > mappedChunk[project.id]! {
+                        result.append(project)
                     }
                 }
                 
@@ -297,6 +297,7 @@ fileprivate actor ProjectUpdater {
             for channelId in channelIds {
                 guard let channelIdUInt = UInt64(channelId) else { continue }
                 _ = try? await bot.send(embed, to: Snowflake(rawValue: channelIdUInt))
+                try! await Task.sleep(milliseconds: 200)
             }
         }
     }
